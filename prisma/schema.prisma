@@ -1,0 +1,682 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid()) @db.Uuid
+  auth_id   String   @unique @db.Uuid
+  email     String?  @unique
+  phone     String?  @unique
+  status    String   @default("ACTIVE")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  patient                  Patient?
+  doctor                   Doctor?
+  admin                    Admin?
+  clinics                  Clinic[]
+  uploadedMedicalDocuments MedicalDocument[]
+  auditEvents              AuditEvent[]
+
+  @@map("users")
+}
+
+model Patient {
+  id                      String    @id @default(uuid()) @db.Uuid
+  user_id                 String    @unique @db.Uuid
+  date_of_birth           DateTime? @db.Date
+  gender                  String?
+  blood_group             String?
+  address_line1           String?
+  city                    String?
+  state                   String?
+  pincode                 String?
+  emergency_contact_name  String?
+  emergency_contact_phone String?
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+
+  user                    User                     @relation(fields: [user_id], references: [id], onDelete: Restrict)
+  appointments            Appointment[]
+  medicalRecords          MedicalRecord[]
+  medicalDataAccessGrants MedicalDataAccessGrant[]
+  auditEvents             AuditEvent[]
+  clinicalEncounters      ClinicalEncounter[]
+  clinicalNotes           ClinicalNote[]
+  clinicalDiagnoses       ClinicalDiagnosis[]
+  treatmentPlans          TreatmentPlan[]
+  prescriptions           Prescription[]
+  labOrders               LabOrder[]
+  labResults              LabResult[]
+
+  @@map("patients")
+}
+
+model Doctor {
+  id                         String   @id @default(uuid()) @db.Uuid
+  user_id                    String   @unique @db.Uuid
+  specialization             String
+  experience_years           Int
+  registration_number        String   @unique
+  medical_council_name       String
+  registration_year          Int
+  verification_status        String   @default("PENDING")
+  bio                        String?
+  consultation_fee           Decimal? @db.Decimal(10, 2)
+  is_accepting_live_requests Boolean  @default(false)
+  createdAt                  DateTime @default(now()) @map("created_at")
+  updatedAt                  DateTime @updatedAt @map("updated_at")
+
+  user                    User                     @relation(fields: [user_id], references: [id], onDelete: Restrict)
+  clinics                 DoctorClinic[]
+  medicalDataAccessGrants MedicalDataAccessGrant[]
+  clinicalEncounters      ClinicalEncounter[]
+  clinicalNotes           ClinicalNote[]
+  clinicalDiagnoses       ClinicalDiagnosis[]
+  treatmentPlans          TreatmentPlan[]
+  prescriptions           Prescription[]
+  labOrders               LabOrder[]
+  labResults              LabResult[]
+
+  @@index([verification_status])
+  @@index([specialization])
+  @@map("doctors")
+}
+
+model Admin {
+  id         String   @id @default(uuid()) @db.Uuid
+  user_id    String   @unique @db.Uuid
+  department String
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Restrict)
+
+  @@map("admins")
+}
+
+model Clinic {
+  id          String   @id @default(uuid()) @db.Uuid
+  owner_id    String   @db.Uuid
+  name        String
+  description String?
+  phone       String?
+  email       String?
+  website     String?
+  status      String   @default("ACTIVE")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  owner     User             @relation(fields: [owner_id], references: [id], onDelete: Restrict)
+  locations ClinicLocation[]
+  doctors   DoctorClinic[]
+
+  @@index([status])
+  @@map("clinics")
+}
+
+model ClinicLocation {
+  id            String   @id @default(uuid()) @db.Uuid
+  clinic_id     String   @db.Uuid
+  name          String
+  address_line1 String
+  address_line2 String?
+  locality      String?
+  city          String
+  state         String
+  postal_code   String
+  country       String   @default("India")
+  latitude      Float?
+  longitude     Float?
+  timezone      String   @default("Asia/Kolkata")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  clinic             Clinic              @relation(fields: [clinic_id], references: [id], onDelete: Restrict)
+  schedules          Schedule[]
+  scheduleOverrides  ScheduleOverride[]
+  appointments       Appointment[]
+  clinicalEncounters ClinicalEncounter[]
+
+  @@index([city])
+  @@index([state])
+  @@index([postal_code])
+  @@map("clinic_locations")
+}
+
+model DoctorClinic {
+  id        String    @id @default(uuid()) @db.Uuid
+  doctor_id String    @db.Uuid
+  clinic_id String    @db.Uuid
+  status    String    @default("ACTIVE")
+  joined_at DateTime  @default(now())
+  left_at   DateTime?
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  doctor             Doctor              @relation(fields: [doctor_id], references: [id], onDelete: Restrict)
+  clinic             Clinic              @relation(fields: [clinic_id], references: [id], onDelete: Restrict)
+  schedules          Schedule[]
+  scheduleOverrides  ScheduleOverride[]
+  appointments       Appointment[]
+  clinicalEncounters ClinicalEncounter[]
+
+  @@unique([doctor_id, clinic_id])
+  @@index([status])
+  @@map("doctor_clinics")
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+model Schedule {
+  id                 String    @id @default(uuid()) @db.Uuid
+  doctor_clinic_id   String    @db.Uuid
+  clinic_location_id String    @db.Uuid
+  day_of_week        DayOfWeek
+  start_time         String
+  end_time           String
+  status             String    @default("ACTIVE")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  doctorClinic   DoctorClinic    @relation(fields: [doctor_clinic_id], references: [id], onDelete: Restrict)
+  clinicLocation ClinicLocation  @relation(fields: [clinic_location_id], references: [id], onDelete: Restrict)
+  breaks         ScheduleBreak[]
+
+  @@map("schedules")
+}
+
+model ScheduleBreak {
+  id          String   @id @default(uuid()) @db.Uuid
+  schedule_id String   @db.Uuid
+  start_time  String
+  end_time    String
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  schedule Schedule @relation(fields: [schedule_id], references: [id], onDelete: Cascade)
+
+  @@map("schedule_breaks")
+}
+
+model ScheduleOverride {
+  id                 String   @id @default(uuid()) @db.Uuid
+  doctor_clinic_id   String   @db.Uuid
+  clinic_location_id String   @db.Uuid
+  date               String
+  type               String
+  start_time         String?
+  end_time           String?
+  reason             String?
+  status             String   @default("ACTIVE")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  doctorClinic   DoctorClinic   @relation(fields: [doctor_clinic_id], references: [id], onDelete: Restrict)
+  clinicLocation ClinicLocation @relation(fields: [clinic_location_id], references: [id], onDelete: Restrict)
+
+  @@map("schedule_overrides")
+}
+
+model Appointment {
+  id                 String            @id @default(uuid()) @db.Uuid
+  patient_id         String            @db.Uuid
+  doctor_clinic_id   String            @db.Uuid
+  clinic_location_id String            @db.Uuid
+  appointment_date   String
+  start_at           DateTime          @db.Timestamptz(3)
+  end_at             DateTime          @db.Timestamptz(3)
+  status             AppointmentStatus @default(BOOKED)
+  createdAt          DateTime          @default(now()) @map("created_at")
+  updatedAt          DateTime          @updatedAt @map("updated_at")
+
+  patient           Patient            @relation(fields: [patient_id], references: [id], onDelete: Restrict)
+  doctorClinic      DoctorClinic       @relation(fields: [doctor_clinic_id], references: [id], onDelete: Restrict)
+  clinicLocation    ClinicLocation     @relation(fields: [clinic_location_id], references: [id], onDelete: Restrict)
+  clinicalEncounter ClinicalEncounter?
+
+  @@index([doctor_clinic_id, clinic_location_id, appointment_date])
+  @@index([patient_id])
+  @@index([status, appointment_date])
+  @@map("appointments")
+}
+
+enum AppointmentStatus {
+  BOOKED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+enum ClinicalEncounterStatus {
+  OPEN
+  COMPLETED
+  CANCELLED
+}
+
+enum ClinicalNoteType {
+  CONSULTATION
+  FOLLOW_UP
+  PROCEDURE
+  OTHER
+}
+
+enum ClinicalDiagnosisType {
+  PRIMARY
+  SECONDARY
+  DIFFERENTIAL
+}
+
+enum ClinicalDiagnosisStatus {
+  ACTIVE
+  RESOLVED
+}
+
+enum TreatmentPlanStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum PrescriptionStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum LabOrderStatus {
+  ORDERED
+  COMPLETED
+  CANCELLED
+}
+
+enum LabResultStatus {
+  PENDING
+  FINAL
+  AMENDED
+  CANCELLED
+}
+
+enum TreatmentInstructionType {
+  GENERAL
+  DIET
+  LIFESTYLE
+  ACTIVITY
+  FOLLOW_UP
+  SELF_CARE
+  OTHER
+}
+
+enum TreatmentInstructionPriority {
+  ROUTINE
+  IMPORTANT
+  URGENT
+}
+
+model MedicalRecord {
+  id          String   @id @default(uuid()) @db.Uuid
+  patient_id  String   @db.Uuid
+  title       String
+  description String?
+  status      String   @default("ACTIVE")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  patient   Patient           @relation(fields: [patient_id], references: [id], onDelete: Restrict)
+  documents MedicalDocument[]
+
+  @@index([patient_id])
+  @@index([status])
+  @@map("medical_records")
+}
+
+model MedicalDocument {
+  id                  String   @id @default(uuid()) @db.Uuid
+  medical_record_id   String   @db.Uuid
+  original_filename   String
+  storage_object_path String
+  mime_type           String
+  file_size_bytes     Int
+  uploaded_by_user_id String   @db.Uuid
+  status              String   @default("ACTIVE")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  medicalRecord MedicalRecord @relation(fields: [medical_record_id], references: [id], onDelete: Restrict)
+  uploadedBy    User          @relation(fields: [uploaded_by_user_id], references: [id], onDelete: Restrict)
+
+  @@index([medical_record_id])
+  @@index([status])
+  @@map("medical_documents")
+}
+
+model MedicalDataAccessGrant {
+  id         String    @id @default(uuid()) @db.Uuid
+  patient_id String    @db.Uuid
+  doctor_id  String    @db.Uuid
+  status     String    @default("ACTIVE")
+  granted_at DateTime  @default(now())
+  revoked_at DateTime?
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  patient Patient @relation(fields: [patient_id], references: [id], onDelete: Restrict)
+  doctor  Doctor  @relation(fields: [doctor_id], references: [id], onDelete: Restrict)
+
+  @@index([patient_id])
+  @@index([doctor_id])
+  @@index([status])
+  @@map("medical_data_access_grants")
+}
+
+model AuditEvent {
+  id            String   @id @default(uuid()) @db.Uuid
+  actor_user_id String?  @db.Uuid
+  actor_role    String?
+  action        String
+  resource_type String
+  resource_id   String?  @db.Uuid
+  patient_id    String?  @db.Uuid
+  metadata      Json?
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  actor   User?    @relation(fields: [actor_user_id], references: [id], onDelete: Restrict)
+  patient Patient? @relation(fields: [patient_id], references: [id], onDelete: Restrict)
+
+  @@index([actor_user_id])
+  @@index([patient_id])
+  @@index([resource_type, resource_id])
+  @@index([createdAt])
+  @@map("audit_events")
+}
+
+model ClinicalEncounter {
+  id                 String                  @id @default(uuid()) @db.Uuid
+  appointment_id     String                  @unique @db.Uuid
+  patient_id         String                  @db.Uuid
+  doctor_id          String                  @db.Uuid
+  doctor_clinic_id   String                  @db.Uuid
+  clinic_location_id String                  @db.Uuid
+  status             ClinicalEncounterStatus @default(OPEN)
+  started_at         DateTime?
+  ended_at           DateTime?
+  createdAt          DateTime                @default(now()) @map("created_at")
+  updatedAt          DateTime                @updatedAt @map("updated_at")
+
+  appointment       Appointment         @relation(fields: [appointment_id], references: [id], onDelete: Restrict)
+  patient           Patient             @relation(fields: [patient_id], references: [id], onDelete: Restrict)
+  doctor            Doctor              @relation(fields: [doctor_id], references: [id], onDelete: Restrict)
+  doctorClinic      DoctorClinic        @relation(fields: [doctor_clinic_id], references: [id], onDelete: Restrict)
+  clinicLocation    ClinicLocation      @relation(fields: [clinic_location_id], references: [id], onDelete: Restrict)
+  clinicalNotes     ClinicalNote[]
+  clinicalDiagnoses ClinicalDiagnosis[]
+  treatmentPlan     TreatmentPlan?
+  prescriptions     Prescription[]
+  labOrders         LabOrder[]
+  labResults        LabResult[]
+
+  @@index([patient_id])
+  @@index([doctor_id])
+  @@index([doctor_clinic_id])
+  @@index([clinic_location_id])
+  @@map("clinical_encounters")
+}
+
+model ClinicalNote {
+  id                    String           @id @default(uuid()) @db.Uuid
+  encounter_id          String           @db.Uuid
+  patient_id            String           @db.Uuid
+  doctor_id             String           @db.Uuid
+  note_type             ClinicalNoteType
+  subjective            String?          @db.Text
+  objective             String?          @db.Text
+  clinical_observations String?          @db.Text
+  createdAt             DateTime         @default(now()) @map("created_at")
+  updatedAt             DateTime         @updatedAt @map("updated_at")
+
+  encounter ClinicalEncounter @relation(fields: [encounter_id], references: [id], onDelete: Restrict)
+  patient   Patient           @relation(fields: [patient_id], references: [id], onDelete: Restrict)
+  doctor    Doctor            @relation(fields: [doctor_id], references: [id], onDelete: Restrict)
+
+  @@index([encounter_id])
+  @@index([patient_id])
+  @@index([doctor_id])
+  @@map("clinical_notes")
+}
+
+model ClinicalDiagnosis {
+  id                    String                  @id @default(uuid()) @db.Uuid
+  encounter_id          String                  @db.Uuid
+  patient_id            String                  @db.Uuid
+  doctor_id             String                  @db.Uuid
+  diagnosis_type        ClinicalDiagnosisType
+  diagnosis_code        String?
+  diagnosis_code_system String?
+  diagnosis_name        String
+  clinical_description  String?                 @db.Text
+  status                ClinicalDiagnosisStatus @default(ACTIVE)
+  createdAt             DateTime                @default(now()) @map("created_at")
+  updatedAt             DateTime                @updatedAt @map("updated_at")
+
+  encounter ClinicalEncounter @relation(fields: [encounter_id], references: [id], onDelete: Restrict)
+  patient   Patient           @relation(fields: [patient_id], references: [id], onDelete: Restrict)
+  doctor    Doctor            @relation(fields: [doctor_id], references: [id], onDelete: Restrict)
+
+  @@index([encounter_id])
+  @@index([patient_id])
+  @@index([doctor_id])
+  @@index([status])
+  @@map("clinical_diagnoses")
+}
+
+model TreatmentPlan {
+  id           String              @id @default(uuid()) @db.Uuid
+  encounter_id String              @unique @db.Uuid
+  patient_id   String              @db.Uuid
+  doctor_id    String              @db.Uuid
+  title        String
+  summary      String?             @db.Text
+  status       TreatmentPlanStatus @default(ACTIVE)
+  createdAt    DateTime            @default(now()) @map("created_at")
+  updatedAt    DateTime            @updatedAt @map("updated_at")
+
+  encounter    ClinicalEncounter      @relation(fields: [encounter_id], references: [id], onDelete: Restrict)
+  patient      Patient                @relation(fields: [patient_id], references: [id], onDelete: Restrict)
+  doctor       Doctor                 @relation(fields: [doctor_id], references: [id], onDelete: Restrict)
+  instructions TreatmentInstruction[]
+
+  @@index([patient_id])
+  @@index([doctor_id])
+  @@index([status])
+  @@map("treatment_plans")
+}
+
+model TreatmentInstruction {
+  id                String                       @id @default(uuid()) @db.Uuid
+  treatment_plan_id String                       @db.Uuid
+  instruction_type  TreatmentInstructionType
+  instruction_text  String                       @db.Text
+  priority          TreatmentInstructionPriority
+  createdAt         DateTime                     @default(now()) @map("created_at")
+  updatedAt         DateTime                     @updatedAt @map("updated_at")
+
+  treatmentPlan TreatmentPlan @relation(fields: [treatment_plan_id], references: [id], onDelete: Restrict)
+
+  @@index([treatment_plan_id])
+  @@map("treatment_instructions")
+}
+
+model Medication {
+  id            String             @id @default(uuid()) @db.Uuid
+  name          String
+  generic_name  String?
+  strength      String?
+  dosage_form   String?
+  route         String?
+  manufacturer  String?
+  is_active     Boolean            @default(true)
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt @map("updated_at")
+  prescriptions PrescriptionItem[]
+
+  @@map("medications")
+}
+
+model Prescription {
+  id            String             @id @default(uuid()) @db.Uuid
+  encounter_id  String             @db.Uuid
+  patient_id    String             @db.Uuid
+  doctor_id     String             @db.Uuid
+  status        PrescriptionStatus @default(ACTIVE)
+  notes         String?            @db.Text
+  prescribed_at DateTime           @default(now())
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt @map("updated_at")
+
+  encounter ClinicalEncounter  @relation(fields: [encounter_id], references: [id], onDelete: Restrict)
+  patient   Patient            @relation(fields: [patient_id], references: [id], onDelete: Restrict)
+  doctor    Doctor             @relation(fields: [doctor_id], references: [id], onDelete: Restrict)
+  items     PrescriptionItem[]
+
+  @@index([encounter_id])
+  @@index([patient_id])
+  @@index([doctor_id])
+  @@index([status])
+  @@map("prescriptions")
+}
+
+model PrescriptionItem {
+  id              String   @id @default(uuid()) @db.Uuid
+  prescription_id String   @db.Uuid
+  medication_id   String   @db.Uuid
+  dosage          String
+  frequency       String
+  route           String?
+  duration        String?
+  quantity        String?
+  instructions    String?  @db.Text
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  prescription Prescription @relation(fields: [prescription_id], references: [id], onDelete: Restrict)
+  medication   Medication   @relation(fields: [medication_id], references: [id], onDelete: Restrict)
+
+  @@index([prescription_id])
+  @@index([medication_id])
+  @@map("prescription_items")
+}
+
+model LabTest {
+  id            String         @id @default(uuid()) @db.Uuid
+  name          String
+  code          String?
+  description   String?        @db.Text
+  category      String?
+  specimen_type String?
+  is_active     Boolean        @default(true)
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  labOrderItems LabOrderItem[]
+
+  @@map("lab_tests")
+}
+
+model LabOrder {
+  id             String         @id @default(uuid()) @db.Uuid
+  encounter_id   String         @db.Uuid
+  patient_id     String         @db.Uuid
+  doctor_id      String         @db.Uuid
+  status         LabOrderStatus @default(ORDERED)
+  clinical_notes String?        @db.Text
+  ordered_at     DateTime       @default(now())
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  encounter ClinicalEncounter @relation(fields: [encounter_id], references: [id], onDelete: Restrict)
+  patient   Patient           @relation(fields: [patient_id], references: [id], onDelete: Restrict)
+  doctor    Doctor            @relation(fields: [doctor_id], references: [id], onDelete: Restrict)
+  items     LabOrderItem[]
+  results   LabResult[]
+
+  @@index([encounter_id])
+  @@index([patient_id])
+  @@index([doctor_id])
+  @@index([status])
+  @@map("lab_orders")
+}
+
+model LabOrderItem {
+  id           String   @id @default(uuid()) @db.Uuid
+  lab_order_id String   @db.Uuid
+  lab_test_id  String   @db.Uuid
+  instructions String?  @db.Text
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  labOrder       LabOrder        @relation(fields: [lab_order_id], references: [id], onDelete: Restrict)
+  labTest        LabTest         @relation(fields: [lab_test_id], references: [id], onDelete: Restrict)
+  labResultItems LabResultItem[]
+
+  @@index([lab_order_id])
+  @@index([lab_test_id])
+  @@map("lab_order_items")
+}
+
+model LabResult {
+  id           String          @id @default(uuid()) @db.Uuid
+  lab_order_id String          @db.Uuid
+  patient_id   String          @db.Uuid
+  doctor_id    String          @db.Uuid
+  status       LabResultStatus @default(PENDING)
+  report_notes String?         @db.Text
+  resulted_at  DateTime?
+  finalized_at DateTime?
+  createdAt    DateTime        @default(now()) @map("created_at")
+  updatedAt    DateTime        @updatedAt @map("updated_at")
+
+  labOrder            LabOrder           @relation(fields: [lab_order_id], references: [id], onDelete: Restrict)
+  patient             Patient            @relation(fields: [patient_id], references: [id], onDelete: Restrict)
+  doctor              Doctor             @relation(fields: [doctor_id], references: [id], onDelete: Restrict)
+  items               LabResultItem[]
+  clinicalEncounter   ClinicalEncounter? @relation(fields: [clinicalEncounterId], references: [id])
+  clinicalEncounterId String?            @db.Uuid
+
+  @@index([lab_order_id])
+  @@index([patient_id])
+  @@index([doctor_id])
+  @@index([status])
+  @@map("lab_results")
+}
+
+model LabResultItem {
+  id                 String   @id @default(uuid()) @db.Uuid
+  lab_result_id      String   @db.Uuid
+  lab_order_item_id  String   @db.Uuid
+  result_value       String?  @db.Text
+  unit               String?
+  reference_range    String?
+  qualitative_result String?
+  notes              String?  @db.Text
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  labResult    LabResult    @relation(fields: [lab_result_id], references: [id], onDelete: Restrict)
+  labOrderItem LabOrderItem @relation(fields: [lab_order_item_id], references: [id], onDelete: Restrict)
+
+  @@index([lab_result_id])
+  @@index([lab_order_item_id])
+  @@map("lab_result_items")
+}
