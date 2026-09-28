@@ -16,9 +16,13 @@ export class LabOrdersController {
   constructor(private readonly labOrdersService: LabOrdersService) {}
 
   private extractAppUserId(user: any): string {
-    const id = user?.user_metadata?.app_user_id || user?.app_user_id;
+    const id = user?.user_metadata?.app_user_id || user?.app_user_id || user?.appUser?.id;
     if (!id) throw new UnauthorizedException('Unauthenticated or app_user_id missing.');
     return id;
+  }
+
+  private extractRole(user: any): string {
+    return user?.user_metadata?.app_role || user?.app_role || (user?.roles && user?.roles[0]) || 'PATIENT';
   }
 
   @Post('encounters/:encounterId/lab-orders')
@@ -39,7 +43,7 @@ export class LabOrdersController {
     @Param('encounterId') encounterId: string,
   ) {
     const appUserId = this.extractAppUserId(user);
-    const role = user?.user_metadata?.app_role || user?.app_role;
+    const role = this.extractRole(user);
     return this.labOrdersService.getLabOrdersForEncounter(appUserId, role, encounterId);
   }
 
@@ -50,7 +54,7 @@ export class LabOrdersController {
     @Param('id') id: string,
   ) {
     const appUserId = this.extractAppUserId(user);
-    const role = user?.user_metadata?.app_role || user?.app_role;
+    const role = this.extractRole(user);
     return this.labOrdersService.getLabOrderById(appUserId, role, id);
   }
 
@@ -103,7 +107,7 @@ export class LabOrdersController {
     @Param('labOrderId') labOrderId: string,
   ) {
     const appUserId = this.extractAppUserId(user);
-    const role = user?.user_metadata?.app_role || user?.app_role;
+    const role = this.extractRole(user);
     return this.labOrdersService.getLabOrderItems(appUserId, role, labOrderId);
   }
 
@@ -115,7 +119,7 @@ export class LabOrdersController {
     @Param('itemId') itemId: string,
   ) {
     const appUserId = this.extractAppUserId(user);
-    const role = user?.user_metadata?.app_role || user?.app_role;
+    const role = this.extractRole(user);
     return this.labOrdersService.getLabOrderItemById(appUserId, role, labOrderId, itemId);
   }
 

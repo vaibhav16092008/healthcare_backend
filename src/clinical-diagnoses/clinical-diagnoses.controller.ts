@@ -14,9 +14,13 @@ export class ClinicalDiagnosesController {
   constructor(private readonly clinicalDiagnosesService: ClinicalDiagnosesService) {}
 
   private extractAppUserId(user: any): string {
-    const id = user?.user_metadata?.app_user_id || user?.app_user_id;
+    const id = user?.user_metadata?.app_user_id || user?.app_user_id || user?.appUser?.id;
     if (!id) throw new UnauthorizedException('Unauthenticated or app_user_id missing.');
     return id;
+  }
+
+  private extractRole(user: any): string {
+    return user?.user_metadata?.app_role || user?.app_role || (user?.roles && user?.roles[0]) || 'PATIENT';
   }
 
   @Post()
@@ -60,7 +64,7 @@ export class ClinicalDiagnosesController {
     @Param('encounterId') encounterId: string,
   ) {
     const appUserId = this.extractAppUserId(user);
-    const role = user?.user_metadata?.app_role || user?.app_role;
+    const role = this.extractRole(user);
     return this.clinicalDiagnosesService.getDiagnoses(appUserId, role, encounterId);
   }
 
@@ -72,7 +76,7 @@ export class ClinicalDiagnosesController {
     @Param('diagnosisId') diagnosisId: string,
   ) {
     const appUserId = this.extractAppUserId(user);
-    const role = user?.user_metadata?.app_role || user?.app_role;
+    const role = this.extractRole(user);
     return this.clinicalDiagnosesService.getDiagnosisById(appUserId, role, encounterId, diagnosisId);
   }
 }

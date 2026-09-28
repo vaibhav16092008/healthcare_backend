@@ -15,9 +15,13 @@ export class LabResultsController {
   constructor(private readonly labResultsService: LabResultsService) {}
 
   private extractAppUserId(user: any): string {
-    const id = user?.user_metadata?.app_user_id || user?.app_user_id;
+    const id = user?.user_metadata?.app_user_id || user?.app_user_id || user?.appUser?.id;
     if (!id) throw new UnauthorizedException('Unauthenticated or app_user_id missing.');
     return id;
+  }
+
+  private extractRole(user: any): string {
+    return user?.user_metadata?.app_role || user?.app_role || (user?.roles && user?.roles[0]) || 'PATIENT';
   }
 
   @Post('lab-orders/:labOrderId/results')
@@ -38,7 +42,7 @@ export class LabResultsController {
     @Param('labOrderId') labOrderId: string,
   ) {
     const appUserId = this.extractAppUserId(user);
-    const role = user?.user_metadata?.app_role || user?.app_role;
+    const role = this.extractRole(user);
     return this.labResultsService.getLabResultsForOrder(appUserId, role, labOrderId);
   }
 
@@ -49,7 +53,7 @@ export class LabResultsController {
     @Param('id') id: string,
   ) {
     const appUserId = this.extractAppUserId(user);
-    const role = user?.user_metadata?.app_role || user?.app_role;
+    const role = this.extractRole(user);
     return this.labResultsService.getLabResultById(appUserId, role, id);
   }
 
@@ -101,7 +105,7 @@ export class LabResultsController {
     @Param('labResultId') labResultId: string,
   ) {
     const appUserId = this.extractAppUserId(user);
-    const role = user?.user_metadata?.app_role || user?.app_role;
+    const role = this.extractRole(user);
     return this.labResultsService.getLabResultItems(appUserId, role, labResultId);
   }
 
@@ -113,7 +117,7 @@ export class LabResultsController {
     @Param('itemId') itemId: string,
   ) {
     const appUserId = this.extractAppUserId(user);
-    const role = user?.user_metadata?.app_role || user?.app_role;
+    const role = this.extractRole(user);
     return this.labResultsService.getLabResultItemById(appUserId, role, labResultId, itemId);
   }
 

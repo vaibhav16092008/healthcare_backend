@@ -14,9 +14,13 @@ export class ClinicalNotesController {
   constructor(private readonly clinicalNotesService: ClinicalNotesService) {}
 
   private extractAppUserId(user: any): string {
-    const id = user?.user_metadata?.app_user_id || user?.app_user_id;
+    const id = user?.user_metadata?.app_user_id || user?.app_user_id || user?.appUser?.id;
     if (!id) throw new UnauthorizedException('Unauthenticated or app_user_id missing.');
     return id;
+  }
+
+  private extractRole(user: any): string {
+    return user?.user_metadata?.app_role || user?.app_role || (user?.roles && user?.roles[0]) || 'PATIENT';
   }
 
   @Post()
@@ -49,7 +53,7 @@ export class ClinicalNotesController {
     @Param('encounterId') encounterId: string,
   ) {
     const appUserId = this.extractAppUserId(user);
-    const role = user?.user_metadata?.app_role || user?.app_role;
+    const role = this.extractRole(user);
     return this.clinicalNotesService.getNotes(appUserId, role, encounterId);
   }
 
@@ -61,7 +65,7 @@ export class ClinicalNotesController {
     @Param('noteId') noteId: string,
   ) {
     const appUserId = this.extractAppUserId(user);
-    const role = user?.user_metadata?.app_role || user?.app_role;
+    const role = this.extractRole(user);
     return this.clinicalNotesService.getNoteById(appUserId, role, encounterId, noteId);
   }
 }

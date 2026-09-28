@@ -16,9 +16,13 @@ export class PrescriptionsController {
   constructor(private readonly prescriptionsService: PrescriptionsService) {}
 
   private extractAppUserId(user: any): string {
-    const id = user?.user_metadata?.app_user_id || user?.app_user_id;
+    const id = user?.user_metadata?.app_user_id || user?.app_user_id || user?.appUser?.id;
     if (!id) throw new UnauthorizedException('Unauthenticated or app_user_id missing.');
     return id;
+  }
+
+  private extractRole(user: any): string {
+    return user?.user_metadata?.app_role || user?.app_role || (user?.roles && user?.roles[0]) || 'PATIENT';
   }
 
   @Post('encounters/:encounterId/prescriptions')
@@ -39,7 +43,7 @@ export class PrescriptionsController {
     @Param('encounterId') encounterId: string,
   ) {
     const appUserId = this.extractAppUserId(user);
-    const role = user?.user_metadata?.app_role || user?.app_role;
+    const role = this.extractRole(user);
     return this.prescriptionsService.getPrescriptionsForEncounter(appUserId, role, encounterId);
   }
 
@@ -50,7 +54,7 @@ export class PrescriptionsController {
     @Param('id') id: string,
   ) {
     const appUserId = this.extractAppUserId(user);
-    const role = user?.user_metadata?.app_role || user?.app_role;
+    const role = this.extractRole(user);
     return this.prescriptionsService.getPrescriptionById(appUserId, role, id);
   }
 
@@ -103,7 +107,7 @@ export class PrescriptionsController {
     @Param('prescriptionId') prescriptionId: string,
   ) {
     const appUserId = this.extractAppUserId(user);
-    const role = user?.user_metadata?.app_role || user?.app_role;
+    const role = this.extractRole(user);
     return this.prescriptionsService.getPrescriptionItems(appUserId, role, prescriptionId);
   }
 
@@ -115,7 +119,7 @@ export class PrescriptionsController {
     @Param('itemId') itemId: string,
   ) {
     const appUserId = this.extractAppUserId(user);
-    const role = user?.user_metadata?.app_role || user?.app_role;
+    const role = this.extractRole(user);
     return this.prescriptionsService.getPrescriptionItemById(appUserId, role, prescriptionId, itemId);
   }
 

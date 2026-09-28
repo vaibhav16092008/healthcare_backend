@@ -16,9 +16,13 @@ export class TreatmentPlansController {
   constructor(private readonly treatmentPlansService: TreatmentPlansService) {}
 
   private extractAppUserId(user: any): string {
-    const id = user?.user_metadata?.app_user_id || user?.app_user_id;
+    const id = user?.user_metadata?.app_user_id || user?.app_user_id || user?.appUser?.id;
     if (!id) throw new UnauthorizedException('Unauthenticated or app_user_id missing.');
     return id;
+  }
+
+  private extractRole(user: any): string {
+    return user?.user_metadata?.app_role || user?.app_role || (user?.roles && user?.roles[0]) || 'PATIENT';
   }
 
   @Post()
@@ -39,7 +43,7 @@ export class TreatmentPlansController {
     @Param('encounterId') encounterId: string,
   ) {
     const appUserId = this.extractAppUserId(user);
-    const role = user?.user_metadata?.app_role || user?.app_role;
+    const role = this.extractRole(user);
     return this.treatmentPlansService.getPlan(appUserId, role, encounterId);
   }
 
@@ -92,7 +96,7 @@ export class TreatmentPlansController {
     @Param('encounterId') encounterId: string,
   ) {
     const appUserId = this.extractAppUserId(user);
-    const role = user?.user_metadata?.app_role || user?.app_role;
+    const role = this.extractRole(user);
     return this.treatmentPlansService.getInstructions(appUserId, role, encounterId);
   }
 
@@ -104,7 +108,7 @@ export class TreatmentPlansController {
     @Param('instructionId') instructionId: string,
   ) {
     const appUserId = this.extractAppUserId(user);
-    const role = user?.user_metadata?.app_role || user?.app_role;
+    const role = this.extractRole(user);
     return this.treatmentPlansService.getInstructionById(appUserId, role, encounterId, instructionId);
   }
 
