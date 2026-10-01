@@ -11,6 +11,7 @@ describe('ClinicalEncountersService', () => {
   let service: ClinicalEncountersService;
   let mockPrisma: any;
   let mockAudit: any;
+  let module: TestingModule;
 
   beforeEach(async () => {
     mockPrisma = {
@@ -32,7 +33,7 @@ describe('ClinicalEncountersService', () => {
       logEvent: vi.fn(),
     };
 
-    const module: TestingModule = await Test.createTestingModule({
+    module = await Test.createTestingModule({
       providers: [
         ClinicalEncountersService,
         { provide: PrismaService, useValue: mockPrisma },
@@ -41,6 +42,12 @@ describe('ClinicalEncountersService', () => {
     }).compile();
 
     service = module.get<ClinicalEncountersService>(ClinicalEncountersService);
+  });
+
+  afterEach(async () => {
+    if (module) {
+      await module.close();
+    }
   });
 
   const setupDoctor = (isVerified = true) => {

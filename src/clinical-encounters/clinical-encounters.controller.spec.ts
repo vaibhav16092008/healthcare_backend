@@ -9,6 +9,7 @@ import { vi } from 'vitest';
 describe('ClinicalEncountersController', () => {
   let controller: ClinicalEncountersController;
   let mockService: any;
+  let module: TestingModule;
 
   beforeEach(async () => {
     mockService = {
@@ -20,7 +21,7 @@ describe('ClinicalEncountersController', () => {
       getEncounterByAppointment: vi.fn(),
     };
 
-    const module: TestingModule = await Test.createTestingModule({
+    module = await Test.createTestingModule({
       controllers: [ClinicalEncountersController],
       providers: [
         { provide: ClinicalEncountersService, useValue: mockService },
@@ -33,6 +34,12 @@ describe('ClinicalEncountersController', () => {
       .compile();
 
     controller = module.get<ClinicalEncountersController>(ClinicalEncountersController);
+  });
+
+  afterEach(async () => {
+    if (module) {
+      await module.close();
+    }
   });
 
   it('should be defined', () => {
