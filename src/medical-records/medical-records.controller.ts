@@ -16,7 +16,7 @@ function extractAppUserId(user: any): string {
   return user.appUser.id;
 }
 
-@Controller('api/v1/medical-records')
+@Controller('medical-records')
 @UseGuards(SupabaseAuthGuard, RolesGuard)
 @Roles(AppRole.PATIENT)
 export class PatientMedicalRecordsController {
@@ -84,7 +84,7 @@ export class PatientMedicalRecordsController {
   }
 }
 
-@Controller('api/v1/medical-documents')
+@Controller('medical-documents')
 @UseGuards(SupabaseAuthGuard, RolesGuard)
 @Roles(AppRole.PATIENT)
 export class PatientMedicalDocumentsController {
@@ -115,7 +115,7 @@ export class PatientMedicalDocumentsController {
   }
 }
 
-@Controller('api/v1/patients/:patientId')
+@Controller('patients/:patientId')
 @UseGuards(SupabaseAuthGuard, RolesGuard)
 @Roles(AppRole.DOCTOR)
 export class DoctorMedicalRecordsController {

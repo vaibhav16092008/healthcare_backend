@@ -13,7 +13,7 @@ function extractAppUserId(user: any): string {
   return user.appUser.id;
 }
 
-@Controller('api/v1')
+@Controller()
 @UseGuards(SupabaseAuthGuard, RolesGuard)
 export class MedicalDataAccessController {
   constructor(private readonly dataAccess: MedicalDataAccessService) {}

@@ -10,7 +10,7 @@ import { Roles } from '../auth/roles/roles.decorator.js';
 import { AppRole } from '../auth/roles/roles.enum.js';
 import { CurrentUser } from '../auth/current-user.decorator.js';
 
-@Controller('api/v1')
+@Controller()
 @UseGuards(SupabaseAuthGuard, RolesGuard)
 export class LabOrdersController {
   constructor(private readonly labOrdersService: LabOrdersService) {}

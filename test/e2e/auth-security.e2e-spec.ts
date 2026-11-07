@@ -234,7 +234,6 @@ describe('Real End-to-End Security & Auth Suite against Real Supabase PostgreSQL
       const doctorToken = generateAuthToken(doctorAUser.auth_id);
       await request(app.getHttpServer())
         .get('/api/v1/admin/doctors/pending')
-        .set('Authorization', `Bearer ${patientToken => doctorToken}`)
         .set('Authorization', `Bearer ${doctorToken}`)
         .expect(403);
     });

@@ -50,7 +50,7 @@ export class DoctorsController {
 export class PublicDoctorsController {
   constructor(private readonly doctorsService: DoctorsService) {}
 
-  @Get('api/v1/doctors')
+  @Get('doctors')
   @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(AppRole.PATIENT)
   async searchDoctors(@Query() query: DoctorSearchQueryDto) {

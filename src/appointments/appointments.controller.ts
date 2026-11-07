@@ -33,12 +33,12 @@ export class AppointmentsController {
   // ---- CREATION & AVAILABILITY ----
   @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(AppRole.PATIENT)
-  @Post('api/v1/appointments')
+  @Post('appointments')
   createAppointment(@CurrentUser() user: any, @Body() dto: CreateAppointmentDto) {
     return this.appointmentsService.createAppointment(this.extractAppUserId(user), dto);
   }
 
-  @Get('api/v1/doctors/:doctorClinicId/availability')
+  @Get('doctors/:doctorClinicId/availability')
   getAvailability(
     @Param('doctorClinicId') doctorClinicId: string,
     @Query() query: AvailabilityQueryDto
@@ -49,21 +49,21 @@ export class AppointmentsController {
   // ---- RETRIEVAL ----
   @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(AppRole.PATIENT)
-  @Get('api/v1/appointments/me')
+  @Get('appointments/me')
   getPatientAppointments(@CurrentUser() user: any, @Query() query: AppointmentListQueryDto) {
     return this.appointmentsService.getPatientAppointments(this.extractAppUserId(user), query);
   }
 
   @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(AppRole.DOCTOR)
-  @Get('api/v1/doctors/me/appointments')
+  @Get('doctors/me/appointments')
   getDoctorAppointments(@CurrentUser() user: any, @Query() query: AppointmentListQueryDto) {
     return this.appointmentsService.getDoctorAppointments(this.extractAppUserId(user), query);
   }
 
   @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(AppRole.PATIENT, AppRole.DOCTOR)
-  @Get('api/v1/appointments/:id')
+  @Get('appointments/:id')
   getAppointmentById(@CurrentUser() user: any, @Param('id') id: string) {
     return this.appointmentsService.getAppointmentById(this.extractAppUserId(user), this.extractRole(user), id);
   }
@@ -71,21 +71,21 @@ export class AppointmentsController {
   // ---- LIFECYCLE ----
   @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(AppRole.PATIENT, AppRole.DOCTOR)
-  @Post('api/v1/appointments/:id/cancel')
+  @Post('appointments/:id/cancel')
   cancelAppointment(@CurrentUser() user: any, @Param('id') id: string) {
     return this.appointmentsService.cancelAppointment(this.extractAppUserId(user), this.extractRole(user), id);
   }
 
   @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(AppRole.DOCTOR)
-  @Post('api/v1/appointments/:id/complete')
+  @Post('appointments/:id/complete')
   completeAppointment(@CurrentUser() user: any, @Param('id') id: string) {
     return this.appointmentsService.completeAppointment(this.extractAppUserId(user), id);
   }
 
   @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(AppRole.DOCTOR)
-  @Post('api/v1/appointments/:id/no-show')
+  @Post('appointments/:id/no-show')
   markNoShow(@CurrentUser() user: any, @Param('id') id: string) {
     return this.appointmentsService.markNoShow(this.extractAppUserId(user), id);
   }
@@ -93,7 +93,7 @@ export class AppointmentsController {
   // ---- RESCHEDULE ----
   @UseGuards(SupabaseAuthGuard, RolesGuard)
   @Roles(AppRole.PATIENT)
-  @Patch('api/v1/appointments/:id/reschedule')
+  @Patch('appointments/:id/reschedule')
   rescheduleAppointment(@CurrentUser() user: any, @Param('id') id: string, @Body() dto: RescheduleAppointmentDto) {
     return this.appointmentsService.rescheduleAppointment(this.extractAppUserId(user), id, dto);
   }
